@@ -3,12 +3,11 @@ from dotenv import load_dotenv
 from streamlit_extras.add_vertical_space import add_vertical_space
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.llms import OpenAI
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_openai import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
-from langchain.callbacks import get_openai_callback
-import pickle
+from langchain_community.callbacks.manager import get_openai_callback
 import os
 
 
@@ -55,17 +54,15 @@ def main():
         chunks = text_splitter.split_text(text = content)
 
         # Check for existing store or create new one
-        store_name = pdf.name[:-4]
-        if os.path.exists(f"{store_name}.pkl"):
-            with open(f"{store_name}.pkl", "rb") as f:
-                VectorStore = pickle.load(f)
+        store_name = pdf.name[:-4] + '.faiss'
+        embeddings = OpenAIEmbeddings()
+        if os.path.exists(store_name):
+            VectorStore = FAISS.load_local(store_name, embeddings, allow_dangerous_deserialization=True)
         else:
             # Convert chunks -> Embeddings
-            embeddings = OpenAIEmbeddings()
             VectorStore = FAISS.from_texts(chunks, embedding=embeddings)
 
-            with open(f"{store_name}.pkl", "wb") as f:
-                pickle.dump(VectorStore, f)
+            VectorStore.save_local(store_name)
         
         # Accept Questions
         query = st.text_input("Ask questions about your PDF File: ")
@@ -73,18 +70,16 @@ def main():
             docs = VectorStore.similarity_search(query = query, k = 3)
             
             # Setup LLM
-            llm = OpenAI(temperature=0, model_name = "gpt-3.5-turbo")
+            llm = ChatOpenAI(temperature=0, model_name = "gpt-3.5-turbo")
 
             # Setup QA Chain and query it
             chain = load_qa_chain(llm = llm, chain_type = "stuff")
+            input_data = {'input_documents' : docs, 'question' : query}
             with get_openai_callback() as cb:
-                response = chain.run(input_documents = docs, question = query)
+                response = chain.invoke(input=input_data)
                 print(cb)
-            st.write(response)
-
-
-
-    
+            # breakpoint()
+            st.write(response['output_text'])
 
 if __name__ == '__main__':
     main()
