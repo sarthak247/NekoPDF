@@ -6,37 +6,9 @@ Run: streamlit run app.py
 import streamlit as st
 from dotenv import load_dotenv
 from streamlit_extras.add_vertical_space import add_vertical_space
-from PyPDF2 import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from openai_chat import get_openai_embeddings, get_openai_answers
-from llama_chat import get_llama_embeddings, get_llama_answers
-
-def read_pdf(pdf):
-    """
-    Parameters:
-        - pdf: path to the PDF file
-    Return: Returns the contents of the PDF file
-    """
-    pdf_reader = PdfReader(pdf)
-
-    content = ""
-    for page in pdf_reader.pages:
-        content += page.extract_text()
-    return content
-
-def split_into_chunks(content):
-    """
-    Parameters:
-        - content: the content read from the PDf file
-    Return: Returns the contents split into chunks
-    """
-    text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size = 1000,
-            chunk_overlap = 200,
-            length_function = len
-        )
-    chunks = text_splitter.split_text(text = content)
-    return chunks
+from utils import read_pdf, split_into_chunks
+import requests
+import json
 
 # Favicon and Title
 st.set_page_config(page_title="NekoPDF 📖 - Chat with PDF",
@@ -85,17 +57,17 @@ def main():
         if option == 'GPT 3.5 - Turbo':
             # Check for existing store or create new one
             store_name = pdf.name[:-4] + '.openai.faiss'
-            vectorstore = get_openai_embeddings(chunks, store_name)
+            payload = {'chunks': chunks, 'store_name' : store_name, 'query' : query, 'k': k}
             if query:
-                response = get_openai_answers(vectorstore, query, k)
-                st.write(response)
+                response = requests.post(url='http://127.0.0.1:8000/qa/openai', data = json.dumps(payload))
+                st.write(response.text)
         elif option == 'LLama 2 7B':
             # Check for existing store or create one
             store_name = pdf.name[:-4] + '.llama.faiss'
-            vectorstore = get_llama_embeddings(chunks, store_name)
+            payload = {'chunks' : chunks, 'store_name' : store_name, 'query' : query, 'k' : k}
             if query:
-                response = get_llama_answers(vectorstore, query, k)
-                st.write(response)
+                response = requests.post(url='http://127.0.0.1:8000/qa/llama', data = json.dumps(payload))
+                st.write(response.text)
 
 if __name__ == '__main__':
     main()
