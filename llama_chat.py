@@ -18,6 +18,9 @@ llm = LlamaCpp(model_path = './models/llama-2-7b-chat.Q2_K.gguf',
                n_batch = 128,
                n_ctx = 1024)
 
+embeddings = LlamaCppEmbeddings(model_path = './models/llama-2-7b-chat.Q2_K.gguf',
+                                    n_gpu_layers = -1, verbose = False)
+
 # Sample Template
 TEMPLATE = """Use the following pieces of context to answer the question at the end.
 If you don't know the answer, just say that you don't know, don't try to make up an answer.
@@ -34,8 +37,6 @@ def get_llama_embeddings(chunks, store_name):
                         case of existing embeddings or create and save to
     Return: An instance of FAISS Vectorstore
     """
-    embeddings = LlamaCppEmbeddings(model_path = './models/llama-2-7b-chat.Q2_K.gguf',
-                                    n_gpu_layers = -1, verbose = False)
     if os.path.exists(store_name):
         vectorstore = FAISS.load_local(store_name, embeddings, allow_dangerous_deserialization=True)
     else:
