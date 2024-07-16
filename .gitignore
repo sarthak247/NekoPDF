@@ -2,3 +2,6 @@ venv/*
 .env
 *.pdf
 *.pkl
+models/
+*.faiss/
+__pycache__/

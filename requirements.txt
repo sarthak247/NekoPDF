@@ -14,6 +14,7 @@ click==8.1.7
 contourpy==1.2.1
 cycler==0.12.1
 dataclasses-json==0.6.7
+diskcache==5.6.3
 distro==1.9.0
 entrypoints==0.4
 exceptiongroup==1.2.2
@@ -42,6 +43,7 @@ langchain-core==0.2.19
 langchain-openai==0.1.16
 langchain-text-splitters==0.2.2
 langsmith==0.1.85
+llama_cpp_python==0.2.55
 lxml==5.2.2
 Markdown==3.6
 markdown-it-py==3.0.0
