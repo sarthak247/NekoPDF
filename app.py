@@ -3,12 +3,12 @@ Filename: app.py
 Description: Implements functions and methods needed for interacting with NekoPDF
 Run: streamlit run app.py
 """
+import json
 import streamlit as st
 from dotenv import load_dotenv
 from streamlit_extras.add_vertical_space import add_vertical_space
-from utils import read_pdf, split_into_chunks
 import requests
-import json
+from utils import read_pdf, split_into_chunks, get_store_name
 
 # Favicon and Title
 st.set_page_config(page_title="NekoPDF 📖 - Chat with PDF",
@@ -42,12 +42,13 @@ def main():
     k = st.slider('Top K', 1, 5, 1)
 
     # Upload PDF File
-    pdf = st.file_uploader("Upload your PDF", type = 'pdf')
+    pdfs = st.file_uploader("Upload your PDF", type = 'pdf', accept_multiple_files=True)
+    store_name = get_store_name(pdfs)
 
     # Read PDF
-    if pdf is not None:
+    if pdfs is not None:
         # Read PDF content
-        content = read_pdf(pdf)
+        content = read_pdf(pdfs)
 
         # Build chunks of text
         chunks = split_into_chunks(content)
@@ -56,17 +57,21 @@ def main():
         query = st.text_input("Ask questions about your PDF File: ")
         if option == 'GPT 3.5 - Turbo':
             # Check for existing store or create new one
-            store_name = pdf.name[:-4] + '.openai.faiss'
+            store_name =store_name + 'openai.faiss'
             payload = {'chunks': chunks, 'store_name' : store_name, 'query' : query, 'k': k}
             if query:
-                response = requests.post(url='http://127.0.0.1:8000/qa/openai', data = json.dumps(payload))
+                response = requests.post(url='http://127.0.0.1:8000/qa/openai',
+                                         data = json.dumps(payload),
+                                         timeout=120)
                 st.write(response.text)
         elif option == 'LLama 2 7B':
             # Check for existing store or create one
-            store_name = pdf.name[:-4] + '.llama.faiss'
+            store_name = store_name + 'llama.faiss'
             payload = {'chunks' : chunks, 'store_name' : store_name, 'query' : query, 'k' : k}
             if query:
-                response = requests.post(url='http://127.0.0.1:8000/qa/llama', data = json.dumps(payload))
+                response = requests.post(url='http://127.0.0.1:8000/qa/llama',
+                                         data = json.dumps(payload),
+                                         timeout=120)
                 st.write(response.text)
 
 if __name__ == '__main__':
